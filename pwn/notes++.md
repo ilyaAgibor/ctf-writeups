@@ -202,7 +202,7 @@ Now that we have heap and binary leaks, we can calculate offsets and fake a `Dyn
 
 ```[vtable ptr][data ptr][size][capacity]```
 
-We embed this inside a real `DynamicNote` that is allocated before the vector data, then we will access the conent of the real `DynamicNote` because its conent points to our fake note (It is a Note*). using display content we can read 0x1000 bytes and using set content we can write 0x1000 bytes.
+We embed this inside a real `DynamicNote` that is allocated before the vector data, then we will access the conent of the real `DynamicNote` because its conent points to our fake note (It is a Note*). using display content we can read [size] bytes and using set content we can write [capacity] bytes.
 
 ### Winning
 The hard part of the ctf is over, most of the times when you have arbitrary read/write and so many leaks it is not hard to achive RCE. to achive jump I checked the the libc.so and libstdc++.so from the docker (the docker is matching the remote) and saw it had partial RELRO, meaning I could overwrite its GOT.
