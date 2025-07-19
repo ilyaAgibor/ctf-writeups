@@ -100,13 +100,18 @@ Lets allocate 2 more notes and see what happens:
 
 ![alt text](image-9.png)
 
-Look at that! The next note is actually allocated after our vector data! 
+Look at that! The next note is actually allocated after our vector data!
+
+![alt text](allocations-1.gif)
 
 Now, what happens if we keep allocating more notes until the vector overlaps with existing notes? Let’s allocate 5 more:
 
 ![alt text](image-10.png)
 
 The vector got reallocated forward in the heap!
+
+![alt text](vector_realloc.gif)
+
 Let’s check the old vector location:
 
 ![alt text](image-11.png)
@@ -151,6 +156,8 @@ std::operator<<<std::char_traits<char>>(v15, " deleted.\n");
 ```
 Turns out, `std::vector::erase` shifts elements left after deleting. So accessing index 2 gives us what was at index 3.
 
+![alt text](delete.gif)
+
 That’s expected. So we got exactlly the same result as if we were to delete a normal index and then access it? Not exactly, if we will now access the object at index 0 we will get the second note and the first note is now located at index -1. 
 
 But what excatly this allows us to do? This by it self wont give us much, we could access index 1 to trigger the UAF but we know the heap allocator destorys the first 0x16 bytes of an allocation so we would just get a seg fault. Instead lets take a closer look at the delete code, If the `notes_vector[index]` returns 0 it will not try to call the destractor but it will still call `std::vector::erase` which will do the shift. This will allow us to shift a lot of the data on the heap without crashing!
@@ -185,6 +192,8 @@ I also chose the last note that was allocated right before the current vector da
 
 With all of this new knowledge we could shift the heap to fit the vector data inside of the DynamicNote so that 0x91 will fall as the string size and the vector data will fall inside of the string inline data.
 
+![alt text](negative.gif)
+
 Lets now "erase" the zeros that come after that object. by calculating the indexes we get `-4`, we will erase that index 3 times. lets look at the memory now:
 
 ![alt text](image-18.png)
@@ -204,8 +213,10 @@ Now that we have heap and binary leaks, we can calculate offsets and fake a `Dyn
 
 We embed this inside a real `DynamicNote` that is allocated before the vector data, then we will access the conent of the real `DynamicNote` because its conent points to our fake note (It is a Note*). using display content we can read [size] bytes and using set content we can write [capacity] bytes.
 
+![alt text](image-20.png)
+
 ### Winning
-The hard part of the ctf is over, most of the times when you have arbitrary read/write and so many leaks it is not hard to achive RCE. to achive jump I checked the the libc.so and libstdc++.so from the docker (the docker is matching the remote) and saw it had partial RELRO, meaning I could overwrite its GOT.
+The hard part of the CTF is over, most of the times when you have arbitrary read/write and so many leaks it is not hard to achive RCE. to achive arbitrary jump I checked the the libc.so and libstdc++.so from the docker (the docker is matching the remote) and saw it had partial RELRO, meaning I could overwrite its GOT.
 I leaked the libstdc++ using the GOT of the binary, then I overwrote the free function inside of the GOT of libstdc++ to point to system, then I freed a DynamicNote with the conent of `/bin/sh` and finally:
 ```bash
 $ ls
@@ -334,5 +345,5 @@ if __name__ == "__main__":
 ```
 </details> 
 
-#### About the creator
+#### About the writer
 I was part of the team 0x1A, that consisted of me and my friend. We really enjoyed the CTF and especially this challange which was pretty hard. Big Thanks to @White the creator of the challange!
